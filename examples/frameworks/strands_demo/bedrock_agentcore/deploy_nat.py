@@ -14,49 +14,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import json
 import boto3
 import os
 
 # Configuration
-CONTAINER_IMAGE = 'strands-demo:latest'
-IAM_AGENTCORE_ROLE = '<IAM_AGENTCORE_ROLE>'
-
 AWS_REGION = os.environ['AWS_DEFAULT_REGION']
 AWS_ACCOUNT_ID = os.environ['AWS_ACCOUNT_ID']
 IAM_AGENTCORE_ROLE = f'arn:aws:iam::{os.environ.get("AWS_ACCOUNT_ID")}:role/AgentCore_NAT'
-
-RUNTIME_NAME = "strands-demo"
-
-cclient = boto3.client('bedrock-agentcore-control', region_name=AWS_REGION)
-cresponse = cclient.list_agent_runtimes()
-
-for runtime in cresponse['agentRuntimes']:
-    if runtime['agentRuntimeName'] == RUNTIME_NAME:
-        runtime_id = runtime['agentRuntimeId']
-        print(f"Found runtime ID: {runtime_id}")
-        break
+CONTAINER_IMAGE = 'strands-demo'
+AGENT_NAME = 'strands_demo'
 
 client = boto3.client(
     'bedrock-agentcore-control',
     region_name=AWS_REGION
 )
 
-response = client.update_agent_runtime(
-    agentRuntimeId=runtime_id,
+response = client.create_agent_runtime(
+    agentRuntimeName=AGENT_NAME,
     agentRuntimeArtifact={
         'containerConfiguration': {
             'containerUri': (
                 f'{AWS_ACCOUNT_ID}.dkr.ecr.{AWS_REGION}'
-                f'.amazonaws.com/{CONTAINER_IMAGE}'
+                f'.amazonaws.com/{CONTAINER_IMAGE}:latest'
             )
         }
     },
     networkConfiguration={"networkMode": "PUBLIC"},
-    roleArn=IAM_AGENTCORE_ROLE
+    roleArn=IAM_AGENTCORE_ROLE,
+    environmentVariables={
+        'AWS_DEFAULT_REGION': AWS_REGION
+    },
 )
 
-print("Agent Runtime updated successfully!")
+print("Agent Runtime created successfully!")
 print(f"Agent Runtime ARN: {response['agentRuntimeArn']}")
+print(f"export AGENT_RUNTIME_ARN={response['agentRuntimeArn']}")
 print(f"Status: {response['status']}")
